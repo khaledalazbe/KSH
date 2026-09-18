@@ -1,0 +1,11 @@
+{
+ "bg":   "#070B24",
+ "ink":  "#ECF1FF",
+ "acc":  "#F7D68C",
+ "clay": "#C89A46",
+ "mut":  "#8A9CCB",
+ "font": "Cairo",
+ "handle": "",
+ "logo": "logo.png",
+ "grade": false
+}

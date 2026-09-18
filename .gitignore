@@ -1,0 +1,10 @@
+# مخرجات وسيطة — تُبنى من جديد
+work/
+*.wav
+vfr/
+out/*.jpg
+!out/ad-master.*
+prev/
+models/
+node_modules/
+cutz.mp4
