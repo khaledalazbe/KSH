@@ -39,7 +39,7 @@
 10_script_edit.py    show · dupes · drop · keep · apply · undo
 11_behind_text.js    الكلام ورا الشخص (plan · build 2:6-8 · off)
 personmask.swift     قصّ الشخص بمكتبة ماك (Vision) — يبنيه 11 تلقائياً
-12_clean_style.py    الستايل النظيف (صور ورا الراس · هوك بالكشيدة · إوترو شعار) — init · preview · range · render
+12_simple_mode.py    الوضع البسيط (صور ورا الراس · هوك بالكشيدة · إوترو شعار) — init · preview · range · render
 ```
 
 ## قواعد لا تُكسر

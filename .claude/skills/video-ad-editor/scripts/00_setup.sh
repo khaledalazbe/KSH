@@ -17,9 +17,9 @@ line "الجاهز: ${OK[*]:-لا شيء}"
 # المحرّك الثاني (ريموشن) اختياري تماماً — الخفيف يشتغل بدونه
 if have npm; then line "المحرّك الثاني (ريموشن): متاح عند الطلب — 04b_remotion.sh setup ينزّله (~500 ميقا)"
 else line "المحرّك الثاني (ريموشن): يحتاج npm — غير متاح، والخفيف يكفي"; fi
-# الستايل النظيف (12_clean_style.py) — اختياري، يُنزَّل عند أول استخدام له
-if python3 -c "import cv2,mediapipe,PIL" 2>/dev/null; then line "الستايل النظيف: جاهز"
-else line "الستايل النظيف: عند الطلب — pip3 install opencv-python-headless mediapipe pillow arabic-reshaper python-bidi"; fi
+# الوضع البسيط (12_simple_mode.py) — اختياري، يُنزَّل عند أول استخدام له
+if python3 -c "import cv2,mediapipe,PIL" 2>/dev/null; then line "الوضع البسيط: جاهز"
+else line "الوضع البسيط: عند الطلب — pip3 install opencv-python-headless mediapipe pillow arabic-reshaper python-bidi"; fi
 if [ ${#MISS[@]} -eq 0 ]; then line "✅ كل شي جاهز — نقدر نبدأ."; exit 0; fi
 line "الناقص: ${MISS[*]}"
 

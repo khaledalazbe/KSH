@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""الستايل النظيف — «الصور ورا الراس». بديل الخطوة 7 و9 (المشاهد المرسومة) فقط؛ كل الباقي مشترك.
-  python3 12_clean_style.py <work> init                  → clean.json (مسودة من caps.json + theme.json)
-  python3 12_clean_style.py <work> preview 0.5 3 7.8 ... → clean-sheet.jpg (ورقة لقطات بلا رندر كامل)
-  python3 12_clean_style.py <work> range 6 10            → clean-range.mp4 (تجربة نافذة)
-  python3 12_clean_style.py <work> render                → ad-final.mp4 (صورة + صوت cutz + sfx.wav لو موجود)
+"""الوضع البسيط — «الصور ورا الراس». بديل الخطوة 7 و9 (المشاهد المرسومة) فقط؛ كل الباقي مشترك.
+  python3 12_simple_mode.py <work> init                  → simple.json (مسودة من caps.json + theme.json)
+  python3 12_simple_mode.py <work> preview 0.5 3 7.8 ... → simple-sheet.jpg (ورقة لقطات بلا رندر كامل)
+  python3 12_simple_mode.py <work> range 6 10            → simple-range.mp4 (تجربة نافذة)
+  python3 12_simple_mode.py <work> render                → ad-final.mp4 (صورة + صوت cutz + sfx.wav لو موجود)
 بعدها: 06b_master.sh و09_srt.py كالعادة.
 
-يقرأ: cutz.mp4 · caps.json · theme.json · clean.json · broll/ · logo
+يقرأ: cutz.mp4 · caps.json · theme.json · simple.json · broll/ · logo
 الطبقات: الفيديو (بزوم اللقطة) → كروت البي-رول + الأكسنت (ورا الشخص) → الشخص مقصوص فوقها
         → كروت قدّام (behind:false) → الهوك / الكابشن → الإوترو بعد نهاية الكلام"""
 import json, sys, os, math, subprocess, urllib.request
@@ -26,7 +26,7 @@ CAPS = json.load(open(J("caps.json")))
 def hexrgb(h): h = h.lstrip("#"); return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 def lum(c): return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]
 
-# ═══ init: مسودة clean.json ═══════════════════════════════════════════════════
+# ═══ init: مسودة simple.json ═══════════════════════════════════════════════════
 if CMD == "init":
     words = [w for c in CAPS["cards"] for w in c["w"]]
     # قسّم لكروت ≤٣ كلمات — علامة ترقيم أو سكتة > 0.25ث = حد إجباري
@@ -71,14 +71,14 @@ if CMD == "init":
         "captions": caps, "shots": shots, "broll": [],
         "outro": {"dur": 3.2, "logo": TH.get("logo", "logo.png"), "name": ""},
     }
-    json.dump(plan, open(J("clean.json"), "w"), ensure_ascii=False, indent=1)
-    print(f"✅ clean.json — هوك: {' '.join(w['t'] for w in hook)} (لين {hook_end}s) · "
+    json.dump(plan, open(J("simple.json"), "w"), ensure_ascii=False, indent=1)
+    print(f"✅ simple.json — هوك: {' '.join(w['t'] for w in hook)} (لين {hook_end}s) · "
           f"{len(caps)} كابشن · {len(shots)} لقطة · broll فاضي (عبّه)")
     for c in caps: print(f"  {c['s']:6.2f}-{c['e']:6.2f}  {c['text']}")
     sys.exit(0)
 
 # ═══ الإعداد للرسم ═══════════════════════════════════════════════════════════
-P = json.load(open(J("clean.json")))
+P = json.load(open(J("simple.json")))
 COL = P.get("colors", {})
 INK = (255, 255, 255)                       # الكابشن فوق الفيديو أبيض دائماً
 ARROW = hexrgb(COL.get("arrow", "#0B0B6B")); CIRC = hexrgb(COL.get("circle", "#E9B85A"))
@@ -94,7 +94,7 @@ if not RAQM:
 def is_ar(s): return any("؀" <= c <= "ۿ" for c in s)
 def shape(s):
     """بدون raqm: نشكّل بـarabic_reshaper. الأشكال «المعزولة» نرجعها للحرف الأصلي —
-    خطوط مثل Tajawal ما فيها هالرموز وتطلع مربعات، والحرف الأصلي نفس الشكل"""
+    بعض الخطوط ما فيها هالرموز وتطلع مربعات، والحرف الأصلي نفس الشكل"""
     if RAQM or not is_ar(s): return s
     import unicodedata
     out = get_display(arabic_reshaper.reshape(s))
@@ -103,14 +103,15 @@ def shape(s):
 
 _fc = {}
 def font(weight, size):
-    """خط الثيم (theme.font) بالوزن المطلوب — من مجلد الشغل أو assets/fonts، والبديل Tajawal"""
+    """خط الوضع البسيط: IBM Plex Sans Arabic (نفس خط الريل المرجعي) — مو خط الثيم.
+    يتغيّر بـ"font" بـsimple.json (اسم العائلة، والملف {fam}-{weight}.ttf بمجلد الشغل أو assets/fonts)"""
     key = (weight, size)
     if key in _fc: return _fc[key]
-    fam = TH.get("font", "Tajawal").replace(" ", "")
+    fam = P.get("font", "IBMPlexSansArabic").replace(" ", "")
     lay = ImageFont.Layout.RAQM if RAQM else ImageFont.Layout.BASIC
     f = None
     for d in (WORK, J("fonts"), os.path.join(SK, "assets", "fonts")):
-        for fn in (f"{fam}-{weight}.ttf", f"{fam}.ttf", f"Tajawal-{weight}.ttf"):
+        for fn in (f"{fam}-{weight}.ttf", f"{fam}.ttf", f"IBMPlexSansArabic-{weight}.ttf"):
             p = os.path.join(d, fn)
             if os.path.exists(p):
                 f = ImageFont.truetype(p, size, layout_engine=lay)
@@ -177,7 +178,7 @@ def stretch(word, fnt, target):
 HOOK = P.get("hook") or {}; HW = HOOK.get("words", []); hook_imgs = []
 if HW:
     size = int(HOOK.get("size", 150 if len(HW) <= 4 else 128))
-    hf = font("Black", size)
+    hf = font(HOOK.get("weight", "Bold"), size)
     raw = [w["w"] for w in HW]
     colw = HOOK["width"] * W_ if HOOK.get("width") else \
         min(0.40 * W_, max(hf.getlength(shape(w)) for w in raw) * 1.15)
@@ -199,7 +200,7 @@ def draw_hook(fr, t):
 
 # ═══ الكابشن ═════════════════════════════════════════════════════════════════
 CAPL = P.get("captions", [])
-CF = font("Bold", int(P.get("caption_size", 66))); CAP_Y = float(P.get("caption_y", 0.555))
+CF = font(P.get("caption_weight", "Bold"), int(P.get("caption_size", 62))); CAP_Y = float(P.get("caption_y", 0.585))
 _cc = {}
 def cap_img(txt):
     if txt not in _cc:
@@ -412,12 +413,12 @@ if CMD == "preview":
     cols = min(6, len(thumbs)); rows = -(-len(thumbs) // cols)
     thumbs += [np.zeros_like(thumbs[0])] * (rows * cols - len(thumbs))
     sheet = np.vstack([np.hstack(thumbs[r*cols:(r+1)*cols]) for r in range(rows)])
-    cv2.imwrite(J("clean-sheet.jpg"), sheet[..., ::-1], [cv2.IMWRITE_JPEG_QUALITY, 88])
-    print(f"✅ clean-sheet.jpg — {len(ts)} لقطة"); sys.exit(0)
+    cv2.imwrite(J("simple-sheet.jpg"), sheet[..., ::-1], [cv2.IMWRITE_JPEG_QUALITY, 88])
+    print(f"✅ simple-sheet.jpg — {len(ts)} لقطة"); sys.exit(0)
 
 # ═══ رندر كامل / نافذة ═══════════════════════════════════════════════════════
 t0, t1, dst = 0.0, TOTAL + OUT_DUR, J("ad-final.mp4")
-if CMD == "range": t0, t1, dst = float(ARGS[0]), float(ARGS[1]), J("clean-range.mp4")
+if CMD == "range": t0, t1, dst = float(ARGS[0]), float(ARGS[1]), J("simple-range.mp4")
 dur = t1 - t0
 sfx = J("sfx.wav") if os.path.exists(J("sfx.wav")) else None
 ain = ["-ss", f"{t0:.3f}", "-i", SRC] + (["-ss", f"{t0:.3f}", "-i", sfx] if sfx else [])
