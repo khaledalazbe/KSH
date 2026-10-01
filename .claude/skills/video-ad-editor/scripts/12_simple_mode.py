@@ -102,23 +102,48 @@ def shape(s):
                    and len(d.split()) == 2 else c for c in out)
 
 _fc = {}
-def font(weight, size):
-    """خط الوضع البسيط: IBM Plex Sans Arabic (نفس خط الريل المرجعي) — مو خط الثيم.
-    يتغيّر بـ"font" بـsimple.json (اسم العائلة، والملف {fam}-{weight}.ttf بمجلد الشغل أو assets/fonts)"""
-    key = (weight, size)
+FONTS_DIR = os.path.join(SK, "assets", "fonts")
+GF = "https://raw.githubusercontent.com/google/fonts/main/ofl/"
+
+def font_file(spec, weight):
+    """spec = ملف .ttf/.otf (بمجلد الشغل أو <work>/fonts — للخطوط من 1001fonts وبيهانس وغيرها)
+            أو رقم/اسم من فهرس الخطوط (assets/fonts/index.json ← font-sheet-*.jpg)
+            أو اسم أي خط عربي بـGoogle Fonts. غير المدمج ينزل مرة وحدة للكاش."""
+    if spec.lower().endswith((".ttf", ".otf")):
+        for d in (WORK, J("fonts")):
+            if os.path.exists(os.path.join(d, spec)): return os.path.join(d, spec)
+        raise SystemExit(f"❌ ملف الخط {spec} مو موجود بمجلد الشغل ولا fonts/")
+    idx = json.load(open(os.path.join(FONTS_DIR, "index.json")))
+    norm = lambda x: str(x).lower().replace(" ", "").replace("-", "")
+    hit = next((r for r in idx if str(r[0]) == str(spec).strip() or norm(r[1]) == norm(spec)), None)
+    name, key = (hit[1], hit[2]) if hit else (spec, norm(spec))
+    for fn in (f"{name.replace(' ', '')}-{weight}.ttf",):          # المدمج (IBM Plex)
+        if os.path.exists(os.path.join(FONTS_DIR, fn)): return os.path.join(FONTS_DIR, fn)
+    cd = os.path.join(CACHE, "fonts", key); os.makedirs(cd, exist_ok=True)
+    if not [f for f in os.listdir(cd) if f.endswith(".ttf")]:
+        import re, urllib.parse
+        print(f"⬇️  الخط {name} ...")
+        meta = urllib.request.urlopen(GF + key + "/METADATA.pb").read().decode()
+        for fn in sorted(set(re.findall(r'filename: "([^"]+)"', meta))):
+            if "italic" not in fn.lower():
+                urllib.request.urlretrieve(GF + key + "/" + urllib.parse.quote(fn), os.path.join(cd, fn))
+    fs = sorted(f for f in os.listdir(cd) if f.endswith(".ttf"))
+    for want in (f"-{weight}.", "[", "-Bold.", "-ExtraBold.", "-SemiBold.", "-Regular."):
+        m = [f for f in fs if want in f]
+        if m: return os.path.join(cd, m[0])
+    return os.path.join(cd, fs[0])
+
+def font(weight, size, spec=None):
+    """خط الوضع البسيط — مو خط الثيم. الافتراضي IBM Plex Sans Arabic؛
+    يتغيّر بـ"font" (الكابشن والإوترو) و"hook_font" (الهوك) بـsimple.json"""
+    spec = spec or P.get("font", "IBM Plex Sans Arabic")
+    key = (spec, weight, size)
     if key in _fc: return _fc[key]
-    fam = P.get("font", "IBMPlexSansArabic").replace(" ", "")
-    lay = ImageFont.Layout.RAQM if RAQM else ImageFont.Layout.BASIC
-    f = None
-    for d in (WORK, J("fonts"), os.path.join(SK, "assets", "fonts")):
-        for fn in (f"{fam}-{weight}.ttf", f"{fam}.ttf", f"IBMPlexSansArabic-{weight}.ttf"):
-            p = os.path.join(d, fn)
-            if os.path.exists(p):
-                f = ImageFont.truetype(p, size, layout_engine=lay)
-                try: f.set_variation_by_name(weight)
-                except Exception: pass
-                break
-        if f: break
+    f = ImageFont.truetype(font_file(spec, weight), size,
+                           layout_engine=ImageFont.Layout.RAQM if RAQM else ImageFont.Layout.BASIC)
+    for v in (weight, "Bold", "SemiBold"):                       # خط متغيّر الوزن
+        try: f.set_variation_by_name(v); break
+        except Exception: pass
     _fc[key] = f; return f
 
 clamp = lambda x, a=0.0, b=1.0: max(a, min(b, x))
@@ -178,7 +203,7 @@ def stretch(word, fnt, target):
 HOOK = P.get("hook") or {}; HW = HOOK.get("words", []); hook_imgs = []
 if HW:
     size = int(HOOK.get("size", 150 if len(HW) <= 4 else 128))
-    hf = font(HOOK.get("weight", "Bold"), size)
+    hf = font(HOOK.get("weight", "Bold"), size, P.get("hook_font"))
     raw = [w["w"] for w in HW]
     colw = HOOK["width"] * W_ if HOOK.get("width") else \
         min(0.40 * W_, max(hf.getlength(shape(w)) for w in raw) * 1.15)
